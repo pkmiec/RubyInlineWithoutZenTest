@@ -564,7 +564,9 @@ VALUE #{method}_equals(VALUE value) {
           flags = @flags.join(' ')
           libs  = @libs.join(' ')
 
-          config_hdrdir = if RUBY_VERSION > '1.9' then
+          config_hdrdir = if RbConfig::CONFIG['rubyarchhdrdir'] then
+                            "-I #{RbConfig::CONFIG['rubyarchhdrdir']}"
+                          elsif RUBY_VERSION > '1.9' then
                             "-I #{File.join hdrdir, RbConfig::CONFIG['arch']}"
                           else
                             nil
@@ -590,12 +592,12 @@ VALUE #{method}_equals(VALUE value) {
                   (RbConfig::CONFIG['CCDLFLAGS']        if windoze),
                 ].compact.join(' ')
 
-         # strip off some makefile macros for mingw 1.9
-         cmd = cmd.gsub(/\$\(.*\)/, '') if RUBY_PLATFORM =~ /mingw/
+          # odd compilation error on clang + freebsd 10. Ruby built w/ rbenv.
+          cmd = cmd.gsub(/-Wl,-soname,\$@/, "-Wl,-soname,#{File.basename so_name}")
 
-          # TODO: remove after osx 10.5.2
-          cmd += ' -flat_namespace -undefined suppress' if
-            RUBY_PLATFORM =~ /darwin9\.[01]/
+          # strip off some makefile macros for mingw 1.9
+          cmd = cmd.gsub(/\$\(.*\)/, '') if RUBY_PLATFORM =~ /mingw/
+
           cmd += " 2> #{DEV_NULL}" if $TESTING and not $DEBUG
 
           warn "Building #{so_name} with '#{cmd}'" if $DEBUG
